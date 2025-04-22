@@ -49,6 +49,7 @@ def get_password(service):
     else:
         print(f'No credentials found for {service}')
 
+# Retrieve all passwords
 def get_all_passwords():
     conn = sqlite3.connect(db)
     cursor = conn.cursor()
@@ -61,15 +62,43 @@ def get_all_passwords():
     else:
         print('No entries found')
 
-def delete_password(password_id):
+# Delete an entry
+def delete_password(entry_id):
     conn = sqlite3.connect(db)
     cursor = conn.cursor()
-    cursor.execute('DELETE FROM passwords WHERE id=?', (password_id,))
+    cursor.execute('DELETE FROM passwords WHERE id=?', (entry_id,))
     if cursor.rowcount == 0:
-        print('No entry found under ID:', {password_id})
+        print('No entry found under ID:', {entry_id})
     else:
         conn.commit()
-        print('Deleted entry with ID:', {password_id})
+        print('Deleted entry with ID:', {entry_id})
+
+# Update a username
+def update_username(entry_id, new_username):
+    conn = sqlite3.connect(db)
+    cursor = conn.cursor()
+    cursor.execute('UPDATE passwords SET username=? WHERE id=?', (new_username, entry_id))
+    if cursor.rowcount == 0:
+        print('No entry found under ID:', {entry_id})
+    else:
+        conn.commit()
+        print(f'Updated username to {new_username} of entry with ID:{entry_id}')
+    conn.close()
+
+# Update a password
+def update_password(entry_id, new_password):
+    if not validate_password(new_password):
+        print('Error: Password must be at least 8 characters and include at least one uppercase letter, lowercase letter, number, and special character')
+        return
+    conn = sqlite3.connect(db)
+    cursor = conn.cursor()
+    cursor.execute('UPDATE passwords SET password=? WHERE id=?', (new_password, entry_id))
+    if cursor.rowcount == 0:
+        print('No entry found under ID:', {entry_id})
+    else:
+        conn.commit()
+        print('Updated entry with ID:', {entry_id})
+    conn.close()
 
 def main():
     parser = argparse.ArgumentParser(description='Password Manager')
@@ -92,6 +121,16 @@ def main():
     delete = subparsers.add_parser('delete', help = 'Delete a password via ID')
     delete.add_argument('id', type=int, help = 'ID of entry to delete (use get or get_all to find entry you wish to delete)')
 
+    # Update Username
+    update_user = subparsers.add_parser('update_username', help = 'Update a username via ID')
+    update_user.add_argument('id', type=int, help = 'ID of entry to update (use get or get_all to find entry you wish to update)')
+    update_user.add_argument('new_username', help = 'New username to be stored')
+
+    # Update Password
+    update_pass = subparsers.add_parser('update_password', help = 'Update a password via ID')
+    update_pass.add_argument('id', type=int, help = 'ID of entry to update (use get or get_all to find entry you wish to update)')
+    update_pass.add_argument('new_password', help = 'New password to be stored')
+
     args = parser.parse_args()
     init_db()
 
@@ -103,6 +142,10 @@ def main():
         get_all_passwords()
     elif args.command == 'delete':
         delete_password(args.id)
+    elif args.command == 'update_username':
+        update_username(args.id, args.new_username)
+    elif args.command == 'update_password':
+        update_password(args.id, args.new_password)
     else:
         parser.print_help()
 
