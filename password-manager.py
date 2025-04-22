@@ -100,6 +100,30 @@ def update_password(entry_id, new_password):
         print('Updated entry with ID:', {entry_id})
     conn.close()
 
+# Generate a password
+def generate_password(length, entry_id=None):
+    if length < 8:
+        print("Error: Password length must be at least 8 characters")
+        return
+    characters = string.ascii_letters + string.digits + string.punctuation
+    while True:
+        password = ''.join(random.choice(characters) for _ in range(length))
+        if validate_password(password):
+            break
+
+    if entry_id is not None:
+        conn = sqlite3.connect(db)
+        cursor = conn.cursor()
+        cursor.execute('UPDATE passwords SET password=? WHERE id=?', (password, entry_id))
+        conn.commit()
+        if cursor.rowcount == 0:
+            print('No entry found under ID:', {entry_id})
+        else:
+            print(f'Updated password to {password} of entry with ID:{entry_id}')
+        conn.close()
+    else:
+        print(f"Generated Password: {password}")
+
 def main():
     parser = argparse.ArgumentParser(description='Password Manager')
     subparsers = parser.add_subparsers(dest='command')
@@ -131,6 +155,11 @@ def main():
     update_pass.add_argument('id', type=int, help = 'ID of entry to update (use get or get_all to find entry you wish to update)')
     update_pass.add_argument('new_password', help = 'New password to be stored')
 
+    # Generate Password
+    generate = subparsers.add_parser('generate', help = 'Generate a password for a new or existing ID')
+    generate.add_argument('-l', '--length', type=int, default=12, help='Length of the password (default of 12)')
+    generate.add_argument('-u', '--update', type=int, help='Entry ID to update with generated password (optional)')
+
     args = parser.parse_args()
     init_db()
 
@@ -146,6 +175,8 @@ def main():
         update_username(args.id, args.new_username)
     elif args.command == 'update_password':
         update_password(args.id, args.new_password)
+    elif args.command == 'generate':
+        generate_password(args.length, args.update)
     else:
         parser.print_help()
 
